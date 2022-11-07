@@ -1,5 +1,6 @@
 #include "ui.h"
 #include "xinput.h"
+#include "resource.h"
 
 #include <Windows.h>
 #include <stdio.h>
@@ -137,6 +138,7 @@ bool uiInit(HINSTANCE hinst)
 
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.lpfnWndProc = uiProc;
+	wc.hIcon = LoadIconW(hinst, MAKEINTRESOURCEW(IDI_APPICON));
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
 	wc.lpszClassName = XTWNDCLASS;

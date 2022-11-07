@@ -140,11 +140,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="analysis.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="timestamp.h" />
     <ClInclude Include="xinput.h" />
     <ClInclude Include="poll.h" />
     <ClInclude Include="ui.h" />
     <ClInclude Include="xturbtester.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="XTurbTester.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="xturbtester.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
