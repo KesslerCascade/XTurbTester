@@ -95,6 +95,23 @@ typedef struct LastInputData
 static bool lastinputShown;
 static LastInputData* lastinput;
 
+// only update text if it's different to avoid flicker
+static void UpdateText(HWND hWnd, const wchar_t* text)
+{
+	size_t len = wcslen(text);
+	wchar_t* buf = malloc((len + 6) * sizeof(wchar_t));
+	if (!buf)
+		return;
+
+	SendMessageW(hWnd, WM_GETTEXT, (WPARAM)(len + 4), (LPARAM)buf);
+
+	if (wcscmp(text, buf) != 0) {
+		SendMessageW(hWnd, WM_SETTEXT, 0, (LPARAM)text);
+	}
+
+	free(buf);
+}
+
 static void selectController(HWND hWnd, int cursel)
 {
 	if (cursel >= 0 && cursel < inputs->count) {
@@ -148,7 +165,7 @@ static void uiUpdateLastInput()
 		wchar_t buf[256];
 		_snwprintf_s(buf, 256, _TRUNCATE, L"Last input: %s (%d msec ago)",
 			lastinput->name, (int)((now - lastinput->timestamp) / 1000));
-		SendMessageW(hControllerLastInput, WM_SETTEXT, 0, (LPARAM)buf);
+		UpdateText(hControllerLastInput, buf);
 
 		if (!lastinputShown) {
 			ShowWindow(hControllerLastInput, SW_SHOW);
@@ -168,11 +185,11 @@ static void uiHandleFreqUpdate(FreqUpdateData* fd)
 	wchar_t buf[20];
 
 	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.4f", fd->inst);
-	SendMessageW(hInstEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	UpdateText(hInstEdit, buf);
 	_snwprintf_s(buf, 20, _TRUNCATE, L"Avg (%d sec)", fd->avgsec);
-	SendMessageW(hAvgLabel, WM_SETTEXT, 0, (LPARAM)buf);
+	UpdateText(hAvgLabel, buf);
 	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.4f", fd->avg);
-	SendMessageW(hAvgEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	UpdateText(hAvgEdit, buf);
 
 	free(fd);
 }
@@ -182,15 +199,15 @@ static void uiHandleMeasuredUpdate(MeasuredUpdateData* fd)
 	wchar_t buf[20];
 
 	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s1);
-	SendMessageW(h1sEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	UpdateText(h1sEdit, buf);
 	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s2);
-	SendMessageW(h2sEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	UpdateText(h2sEdit, buf);
 	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s3);
-	SendMessageW(h3sEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	UpdateText(h3sEdit, buf);
 	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s5);
-	SendMessageW(h5sEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	UpdateText(h5sEdit, buf);
 	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s10);
-	SendMessageW(h10sEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	UpdateText(h10sEdit, buf);
 
 	free(fd);
 }
@@ -200,11 +217,11 @@ static void uiHandleDelayUpdate(DelayUpdateData* fd)
 	wchar_t buf[20];
 
 	_snwprintf_s(buf, 20, _TRUNCATE, L"%4d", fd->mind);
-	SendMessageW(hMinDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	UpdateText(hMinDelayEdit, buf);
 	_snwprintf_s(buf, 20, _TRUNCATE, L"%4d", fd->avgd);
-	SendMessageW(hAvgDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	UpdateText(hAvgDelayEdit, buf);
 	_snwprintf_s(buf, 20, _TRUNCATE, L"%4d", fd->maxd);
-	SendMessageW(hMaxDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	UpdateText(hMaxDelayEdit, buf);
 
 	free(fd);
 
