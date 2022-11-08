@@ -96,8 +96,8 @@ static void rawinputProcessHID(BYTE* rawData, DWORD size)
     if (newState && !lastState) {
         analysisInput();        // send button press to be logged
 
-        char buf[64];
-        _snprintf_s(buf, sizeof(buf), _TRUNCATE, "Button %d", lastbutton + 1);
+        wchar_t buf[64];
+        _snwprintf_s(buf, 64, _TRUNCATE, L"Button %d", lastbutton + 1);
         uiSetLastInput(buf, tsGet());
     }
     lastState = newState;

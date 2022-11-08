@@ -88,7 +88,7 @@ typedef struct DelayUpdateData
 
 typedef struct LastInputData
 {
-	char* name;
+	wchar_t* name;
 	int64 timestamp;
 } LastInputData;
 
@@ -145,10 +145,10 @@ static void uiUpdateLastInput()
 {
 	int64 now = tsGet();
 	if (lastinput && lastinput->name && now - lastinput->timestamp < 10000000) {
-		char buf[256];
-		_snprintf_s(buf, sizeof(buf), _TRUNCATE, "Last input: %s (%d msec ago)",
+		wchar_t buf[256];
+		_snwprintf_s(buf, 256, _TRUNCATE, L"Last input: %s (%d msec ago)",
 			lastinput->name, (int)((now - lastinput->timestamp) / 1000));
-		SendMessageA(hControllerLastInput, WM_SETTEXT, 0, (LPARAM)buf);
+		SendMessageW(hControllerLastInput, WM_SETTEXT, 0, (LPARAM)buf);
 
 		if (!lastinputShown) {
 			ShowWindow(hControllerLastInput, SW_SHOW);
@@ -165,46 +165,46 @@ static void uiUpdateLastInput()
 
 static void uiHandleFreqUpdate(FreqUpdateData* fd)
 {
-	char buf[20];
+	wchar_t buf[20];
 
-	snprintf(buf, sizeof(buf), "%0.4f", fd->inst);
-	SendMessageA(hInstEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "Avg (%d sec)", fd->avgsec);
-	SendMessageA(hAvgLabel, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%0.4f", fd->avg);
-	SendMessageA(hAvgEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.4f", fd->inst);
+	SendMessageW(hInstEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"Avg (%d sec)", fd->avgsec);
+	SendMessageW(hAvgLabel, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.4f", fd->avg);
+	SendMessageW(hAvgEdit, WM_SETTEXT, 0, (LPARAM)buf);
 
 	free(fd);
 }
 
 static void uiHandleMeasuredUpdate(MeasuredUpdateData* fd)
 {
-	char buf[20];
+	wchar_t buf[20];
 
-	snprintf(buf, sizeof(buf), "%0.2f", fd->s1);
-	SendMessageA(h1sEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%0.2f", fd->s2);
-	SendMessageA(h2sEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%0.2f", fd->s3);
-	SendMessageA(h3sEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%0.2f", fd->s5);
-	SendMessageA(h5sEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%0.2f", fd->s10);
-	SendMessageA(h10sEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s1);
+	SendMessageW(h1sEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s2);
+	SendMessageW(h2sEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s3);
+	SendMessageW(h3sEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s5);
+	SendMessageW(h5sEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s10);
+	SendMessageW(h10sEdit, WM_SETTEXT, 0, (LPARAM)buf);
 
 	free(fd);
 }
 
 static void uiHandleDelayUpdate(DelayUpdateData* fd)
 {
-	char buf[20];
+	wchar_t buf[20];
 
-	snprintf(buf, sizeof(buf), "%4d", fd->mind);
-	SendMessageA(hMinDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%4d", fd->avgd);
-	SendMessageA(hAvgDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%4d", fd->maxd);
-	SendMessageA(hMaxDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%4d", fd->mind);
+	SendMessageW(hMinDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%4d", fd->avgd);
+	SendMessageW(hAvgDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%4d", fd->maxd);
+	SendMessageW(hMaxDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
 
 	free(fd);
 
@@ -508,13 +508,13 @@ void uiUpdateDelay(int mind, int avgd, int maxd)
 	PostMessage(hMainWin, MSG_DELAYUPDATE, 0, (LPARAM)d);
 }
 
-void uiSetLastInput(const char* name, int64 timestamp)
+void uiSetLastInput(const wchar_t* name, int64 timestamp)
 {
 	LastInputData* d = malloc(sizeof(LastInputData));
 	if (!d)
 		return;
 
-	d->name = name ? _strdup(name) : NULL;
+	d->name = name ? _wcsdup(name) : NULL;
 	d->timestamp = timestamp;
 	PostMessage(hMainWin, MSG_SETLASTINPUT, 0, (LPARAM)d);
 }
