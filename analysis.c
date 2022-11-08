@@ -150,11 +150,11 @@ static void analysisUpdate(int64 now)
 				countd++;
 			}
 
-			// update running average if there's not more than a 50% variance in rate
+			// update running average if there's not more than a 75% variance in rate
 			if (l1 != 0) {
 				int64 elapsed = ts - l1;
 				int64 curavg = (lcount > 0) ? (ltotal / lcount) : 0;
-				if (elapsed >= curavg / 2 && elapsed <= curavg * 2) {
+				if (elapsed >= curavg / 4 && elapsed <= curavg * 4) {
 					lavgend = ts;
 					ltotal += elapsed;
 					lcount++;
