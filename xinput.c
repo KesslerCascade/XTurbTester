@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <XInput.h>
+#include <stdio.h>
 #include "xinput.h"
 #include "analysis.h"
 
@@ -12,11 +13,13 @@ static dllXInputGetCapabilities_t dllXInputGetCapabilities;
 typedef DWORD(WINAPI* dllXInputEnable_t)(BOOL enable);
 static dllXInputEnable_t dllXInputEnable;
 
-static CRITICAL_SECTION controllerLock;
-static int controllerId = 1;
+static CRITICAL_SECTION xinputLock;
+static int controllerId = 0;
 
 static DWORD lastPacket;
 static bool lastState;
+
+static bool xinputAvail = false;
 
 bool xinputInit(void)
 {
@@ -29,44 +32,50 @@ bool xinputInit(void)
     dllXInputGetCapabilities = (dllXInputGetCapabilities_t)GetProcAddress(lib, "XInputGetCapabilities");
     dllXInputEnable = (dllXInputEnable_t)GetProcAddress(lib, "XInputEnable");
 
-    InitializeCriticalSection(&controllerLock);
+    InitializeCriticalSection(&xinputLock);
 
-    return dllXInputGetState && dllXInputSetState && dllXInputGetCapabilities && dllXInputEnable;
+    xinputAvail = dllXInputGetState && dllXInputSetState && dllXInputGetCapabilities && dllXInputEnable;
+    return xinputAvail;
 }
 
 void xinputEnable(void)
 {
-    EnterCriticalSection(&controllerLock);
+    if (!xinputAvail)
+        return;
+
+    EnterCriticalSection(&xinputLock);
     dllXInputEnable(TRUE);
-    LeaveCriticalSection(&controllerLock);
+    LeaveCriticalSection(&xinputLock);
 }
 
 void xinputDisable(void)
 {
-    EnterCriticalSection(&controllerLock);
+    if (!xinputAvail)
+        return;
+
+    EnterCriticalSection(&xinputLock);
     dllXInputEnable(FALSE);
-    LeaveCriticalSection(&controllerLock);
+    LeaveCriticalSection(&xinputLock);
 }
 
 void xinputSelect(int controller)
 {
-    EnterCriticalSection(&controllerLock);
+    EnterCriticalSection(&xinputLock);
     controllerId = controller;
-    LeaveCriticalSection(&controllerLock);
+    LeaveCriticalSection(&xinputLock);
 }
 
 void xinputPoll(void)
 {
+    if (!xinputAvail || controllerId == -1)
+        return;
+
     XINPUT_STATE state;
     DWORD ret;
 
-    // early out if the selected controller isn't an xinput one
-    if (controllerId == 0)
-        return;
-
-    EnterCriticalSection(&controllerLock);
-    ret = dllXInputGetState(controllerId - 1, &state);
-    LeaveCriticalSection(&controllerLock);
+    EnterCriticalSection(&xinputLock);
+    ret = dllXInputGetState(controllerId, &state);
+    LeaveCriticalSection(&xinputLock);
 
     if (ret != ERROR_SUCCESS || state.dwPacketNumber == lastPacket)
         return;
@@ -77,4 +86,43 @@ void xinputPoll(void)
     if (newState && !lastState)
         analysisInput();        // send button press to be logged
     lastState = newState;
+}
+
+void xinputEnum(InputSourceList* list)
+{
+    if (!xinputAvail)
+        return;
+
+    // xinput supports 4 static controllers regardless if they exist or not
+    wchar_t buf[22];
+    for (int i = 0; i < 4; i++) {
+        XINPUT_CAPABILITIES caps;
+
+        if (dllXInputGetCapabilities(i, 0, &caps) == ERROR_DEVICE_NOT_CONNECTED)
+            continue;
+
+        _snwprintf_s(buf, 22, _TRUNCATE, L"XInput Controller #%d", i + 1);
+        InputSource* src = malloc(sizeof(InputSource));
+        if (!src)
+            return;
+        src->name = _wcsdup(buf);
+        if (!src->name) {
+            free(src);
+            return;
+        }
+
+        src->type = INPUT_XINPUT;
+        src->vendor = 0;
+        src->product = i;
+
+        InputSource** newsrc = realloc(list->src, (list->count + 1) * sizeof(void*));
+        if (!newsrc) {
+            free(src->name);
+            free(src);
+            return;
+        }
+        list->src = newsrc;
+        list->src[list->count] = src;
+        list->count++;
+    }
 }

@@ -1,5 +1,6 @@
 #include "ui.h"
 #include "xinput.h"
+#include "rawinput.h"
 #include "resource.h"
 
 #include <Windows.h>
@@ -38,6 +39,8 @@ static HWND hMinDelayEdit;
 static HWND hAvgDelayEdit;
 static HWND hMaxDelayEdit;
 
+static InputSourceList* inputs;
+
 enum ControlIDs {
 	idControllerSelect = 1001
 };
@@ -63,12 +66,29 @@ typedef struct DelayUpdateData
 	int maxd;
 } DelayUpdateData;
 
-static void uiCmd(int id, int cmd, LPARAM lparam)
+static void selectController(HWND hWnd, int cursel)
+{
+	if (cursel >= 0 && cursel < inputs->count) {
+		InputSource* src = inputs->src[cursel];
+		if (src->type == INPUT_XINPUT)
+			xinputSelect(src->product);
+		else
+			xinputSelect(-1);
+
+		if (src->type == INPUT_RAWINPUT)
+			rawinputSelect(hWnd, src->vendor, src->product);
+		else
+			rawinputSelect(hWnd, 0, 0);
+	}
+}
+
+static void uiCmd(HWND hWnd, int id, int cmd, LPARAM lparam)
 {
 	switch (id) {
 	case idControllerSelect:
-		if (cmd == CBN_SELCHANGE)
-			xinputSelect((int)SendMessage(hControllerSelect, CB_GETCURSEL, 0, 0) + 1);
+		if (cmd == CBN_SELCHANGE) {
+			selectController(hWnd, (int)SendMessage(hControllerSelect, CB_GETCURSEL, 0, 0));
+		}
 		break;
 	}
 }
@@ -116,8 +136,11 @@ static LRESULT CALLBACK uiProc(HWND hWnd, UINT msg,
 			xinputEnable();
 		break;
 	case WM_COMMAND:
-		uiCmd(LOWORD(wParam), HIWORD(wParam), lParam);
+		uiCmd(hWnd, LOWORD(wParam), HIWORD(wParam), lParam);
 		return 0;
+	case WM_INPUT:
+		rawinputHandleMsg(msg, wParam, lParam);
+		break;
 	case MSG_FREQUPDATE:
 		uiHandleFreqUpdate((FreqUpdateData*)lParam);
 		return 0;
@@ -159,11 +182,12 @@ bool uiInit(HINSTANCE hinst)
 		hMainWin, (HMENU)idControllerSelect, hinst, NULL);
 	SendMessage(hControllerSelect, WM_SETFONT, hFont, 0);
 
-	SendMessage(hControllerSelect, CB_ADDSTRING, 0, (LPARAM)_T("XInput Controller 1"));
-	SendMessage(hControllerSelect, CB_ADDSTRING, 0, (LPARAM)_T("XInput Controller 2"));
-	SendMessage(hControllerSelect, CB_ADDSTRING, 0, (LPARAM)_T("XInput Controller 3"));
-	SendMessage(hControllerSelect, CB_ADDSTRING, 0, (LPARAM)_T("XInput Controller 4"));
+	inputs = getInputSources();
+	for (int i = 0; i < inputs->count; i++) {
+		SendMessageW(hControllerSelect, CB_ADDSTRING, 0, (LPARAM)inputs->src[i]->name);
+	}
 	SendMessage(hControllerSelect, CB_SETCURSEL, 0, 0);
+	selectController(hMainWin, 0);
 
 	hRateSep = CreateWindowEx(0, _T("STATIC"),
 		NULL, WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,

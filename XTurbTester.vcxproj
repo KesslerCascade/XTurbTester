@@ -132,6 +132,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="analysis.c" />
+    <ClCompile Include="input.c" />
+    <ClCompile Include="rawinput.c" />
     <ClCompile Include="timestamp.c" />
     <ClCompile Include="xinput.c" />
     <ClCompile Include="main.c" />
@@ -140,6 +142,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="analysis.h" />
+    <ClInclude Include="input.h" />
+    <ClInclude Include="rawinput.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="timestamp.h" />
     <ClInclude Include="xinput.h" />

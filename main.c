@@ -6,6 +6,7 @@
 #include "timestamp.h"
 #include "ui.h"
 #include "xinput.h"
+#include "rawinput.h"
 
 int wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nCmdShow)
 {
@@ -13,10 +14,8 @@ int wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PW
 		return 0;
 
 	tsInit();
-
-	if (!xinputInit()) {
-		MessageBox(NULL, _T("Failed to initialize XInput, is it installed?"), PROGNAME_TCH, MB_ICONERROR | MB_OK);
-	}
+	xinputInit();
+	rawinputInit();
 
 	if (!pollInit() || !analysisInit() || !uiInit(hInstance)) {
 		MessageBox(NULL, _T("Unknown error"), PROGNAME_TCH, MB_ICONERROR | MB_OK);
