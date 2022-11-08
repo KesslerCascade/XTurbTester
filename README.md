@@ -1,10 +1,17 @@
 # XTurbTester
 ![turbfunction](https://user-images.githubusercontent.com/117657415/200605854-22c64373-8801-4993-953a-1b41dc83e4db.png)
 
-This program was written as a quick and dirty way to test the fire rate of turbo controllers. It supports controllers that use the XInput API such as XBox and compatible  controllers, and also is capable of using raw input to read non-XInput controllers that support the HID standard (most USB and Bluetooth gamepads).
+This program tests the fire rate of turbo controllers.
+
+It supports controllers that use the XInput API such as XBox and compatible
+controllers. It is also capable of using raw input to read non-XInput
+controllers that support the HID standard (most USB and Bluetooth gamepads).
 
 ## Usage
-Simply make sure the controller you want to measure is selected from the drop-down and start pressing buttons. By default the first connected controller is selected. The Refresh button can be used to rescan the list if the hardware configuration is changed by plugging in or connecting a device.
+Simply make sure the controller you want to measure is selected from the drop-down list and start mashing buttons!
+
+By default the first connected controller is selected. The **Refresh** button can be used to rescan for devices, which
+is useful if you plug in or connect a controller after the program is running.
 
 ## Readouts
 | Name       | Description          |
