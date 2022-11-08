@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include "xinput.h"
 #include "analysis.h"
+#include "ui.h"
+#include "timestamp.h"
 
 typedef DWORD(WINAPI* dllXInputGetState_t)(DWORD dwUserIndex, XINPUT_STATE* pState);
 static dllXInputGetState_t dllXInputGetState;
@@ -83,8 +85,40 @@ void xinputPoll(void)
     lastPacket = state.dwPacketNumber;
     // TODO: optional button filter
     bool newState = !!state.Gamepad.wButtons;
-    if (newState && !lastState)
+    if (newState && !lastState) {
         analysisInput();        // send button press to be logged
+
+        const char* bname = "Other Button";
+        if (state.Gamepad.wButtons & XINPUT_GAMEPAD_A)
+            bname = "A Button";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_B)
+            bname = "B Button";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_X)
+            bname = "X Button";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_Y)
+            bname = "Y Button";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER)
+            bname = "Right Shoulder";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER)
+            bname = "Left Shoulder";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB)
+            bname = "Right Thumb";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB)
+            bname = "Left Thumb";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_BACK)
+            bname = "Back Button";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_START)
+            bname = "Start Button";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT)
+            bname = "D-Pad Right";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT)
+            bname = "D-Pad Left";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN)
+            bname = "D-Pad Down";
+        else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP)
+            bname = "D-Pad Up";
+        uiSetLastInput(bname, tsGet());
+    }
     lastState = newState;
 }
 

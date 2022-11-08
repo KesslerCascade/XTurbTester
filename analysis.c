@@ -109,12 +109,17 @@ static void analysisUpdate(int64 now)
 
 	// The analysis is very basic for now.
 	// Buckets to count the number of inputs within the last X seconds.
-	int b1 = 0, b2 = 0, b5 = 0, b10 = 0;
+	int b1 = 0, b2 = 0, b3 = 0, b5 = 0, b10 = 0;
 	// Last seen timestamp and timestamp before that (to calculate instantaneous rate)
 	int64 l1 = 0, l2 = 0;
 	// min, max, total & count for calculating delay between inputs
 	int64 mind = 0, maxd = 0, totald = 0;
 	int countd = 0;
+	// running average
+	int64 lavgstart = 0;
+	int64 lavgend = 0;
+	int64 ltotal = 0;
+	int lcount = 0;
 
 	int abp = abuf.start;			// ringbuffer pointer
 	while (abp != abuf.end) {
@@ -128,6 +133,8 @@ static void analysisUpdate(int64 now)
 			b10++;					// 10s bucket
 			if (age < 5000000)
 				b5++;				// 5s bucket
+			if (age < 3000000)
+				b3++;				// 3s bucket
 			if (age < 2000000)
 				b2++;				// 2s bucket
 			if (age < 1000000)
@@ -143,6 +150,24 @@ static void analysisUpdate(int64 now)
 				countd++;
 			}
 
+			// update running average if there's not more than a 50% variance in rate
+			if (l1 != 0) {
+				int64 elapsed = ts - l1;
+				int64 curavg = (lcount > 0) ? (ltotal / lcount) : 0;
+				if (elapsed >= curavg / 2 && elapsed <= curavg * 2) {
+					lavgend = ts;
+					ltotal += elapsed;
+					lcount++;
+				}
+				else {
+					// no good, restart running average
+					lavgstart = ts;
+					lavgend = ts;
+					ltotal = elapsed;
+					lcount = 1;
+				}
+			}
+
 			l2 = l1;
 			l1 = ts;
 		}
@@ -154,16 +179,20 @@ static void analysisUpdate(int64 now)
 	rbUnlock(&abuf);
 
 	// update UI
-	double instfreq = 0;
+	double instfreq = 0, avgfreq = 0;
 	// Instant freq is special.
 	// Extrapolate it from the time elapsed between the last input and the one before that.
-	if (l2 != 0 && now - l1 < 500000) {
+	if (l2 != 0 && now - l1 < 500000)
 		instfreq = 1000000. / (double)(l1 - l2);
-	}
-	// for frequency, just divide the number of inputs in each bucket by the length of time
-	uiUpdateFreq(instfreq,
-		(double)b1,
+	if (lcount > 0)
+		avgfreq = 1000000. / ((double)ltotal / (double)lcount);
+	int avgstart = (int)(lavgstart > 0 ? (lavgend - lavgstart + 500000) / 1000000 : 0);
+	uiUpdateFreq(instfreq, avgfreq, avgstart);
+
+	// for measured rate, just divide the number of inputs in each bucket by the length of time
+	uiUpdateMeasured((double)b1,
 		(double)b2 / 2.,
+		(double)b3 / 3.,
 		(double)b5 / 5.,
 		(double)b10 / 10.);
 

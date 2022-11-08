@@ -1,9 +1,12 @@
 #include "rawinput.h"
 #include "analysis.h"
+#include "ui.h"
+#include "timestamp.h"
 
 #include <hidusage.h>
 #include <hidpi.h>
 #include <hidsdi.h>
+#include <stdio.h>
 
 #pragma comment(lib, "hid.lib")
 
@@ -76,6 +79,7 @@ static void rawinputProcessHID(BYTE* rawData, DWORD size)
 {
     ULONG nusages;
     USAGE btnusage[256];
+    int lastbutton = -1;
 
     nusages = riButtons;
     bool newState = false;
@@ -84,11 +88,18 @@ static void rawinputProcessHID(BYTE* rawData, DWORD size)
         // TODO: button filter support
         for (int i = 0; i < (int)nusages; i++) {
             newState |= btnusage[i];
+            if (btnusage[i])
+                lastbutton = btnusage[i] - riButtonMin;
         }
     }
 
-    if (newState && !lastState)
+    if (newState && !lastState) {
         analysisInput();        // send button press to be logged
+
+        char buf[64];
+        _snprintf_s(buf, sizeof(buf), _TRUNCATE, "Button %d", lastbutton + 1);
+        uiSetLastInput(buf, tsGet());
+    }
     lastState = newState;
 }
 
