@@ -1,8 +1,8 @@
 #pragma once
 #include <stdbool.h>
-#include <tchar.h>
+#include <wchar.h>
 
 #define PROGNAME "XTurbTester"
-#define PROGNAME_TCH _T("XTurbTester")
+#define PROGNAMEW L"XTurbTester"
 
 typedef long long int64;

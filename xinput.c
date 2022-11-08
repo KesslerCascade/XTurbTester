@@ -25,7 +25,7 @@ static bool xinputAvail = false;
 
 bool xinputInit(void)
 {
-    HMODULE lib = LoadLibrary(_T("xinput1_4.dll"));
+    HMODULE lib = LoadLibraryW(L"xinput1_4.dll");
     if (!lib)
         return false;
 

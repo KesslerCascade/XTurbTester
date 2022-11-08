@@ -18,7 +18,7 @@ int wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PW
 	rawinputInit();
 
 	if (!pollInit() || !analysisInit() || !uiInit(hInstance)) {
-		MessageBox(NULL, _T("Unknown error"), PROGNAME_TCH, MB_ICONERROR | MB_OK);
+		MessageBoxW(NULL, L"Unknown error", PROGNAMEW, MB_ICONERROR | MB_OK);
 	}
 
 	// start background threads
