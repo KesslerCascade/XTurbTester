@@ -96,8 +96,8 @@ static void rawinputProcessHID(BYTE* rawData, DWORD size)
     if (newState && !lastState) {
         analysisInput();        // send button press to be logged
 
-        char buf[64];
-        _snprintf_s(buf, sizeof(buf), _TRUNCATE, "Button %d", lastbutton + 1);
+        wchar_t buf[64];
+        _snwprintf_s(buf, 64, _TRUNCATE, L"Button %d", lastbutton + 1);
         uiSetLastInput(buf, tsGet());
     }
     lastState = newState;
@@ -215,61 +215,25 @@ void rawinputEnum(InputSourceList* list)
             (devinfo.hid.usUsage != HID_USAGE_GENERIC_JOYSTICK && devinfo.hid.usUsage != HID_USAGE_GENERIC_GAMEPAD))
             continue;
 
-        InputSource* src = malloc(sizeof(InputSource));
-        if (!src) {
-            free(ridevices);
-            return;
-        }
-
         sz = 256;
         buf[0] = 0;
         if (GetRawInputDeviceInfoW(ridevices[i].hDevice, RIDI_DEVICENAME, buf, &sz)) {
-            if (wcsstr(buf, L"IG_")) {
-                // this is an XInput device, ignore it
-                free(src);
-                continue;
-            }
+            if (wcsstr(buf, L"IG_"))
+                continue;           // this is an XInput device, ignore it
 
             HANDLE hfile = CreateFileW(buf, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
             if (hfile != INVALID_HANDLE_VALUE) {
-                if (HidD_GetProductString(hfile, buf, sizeof(buf)) && wcslen(buf) > 0) {
-                    src->name = _wcsdup(buf);
-                    if (!src->name) {
-                        free(src);
-                        free(ridevices);
-                        return;
-                    }
+                if (HidD_GetProductString(hfile, buf, sizeof(buf)) && wcslen(buf) > 0)
                     havename = true;
-                }
                 CloseHandle(hfile);
             }
         }
 
-        if (!havename) {
+        if (!havename)
             // fallback for if we failed to read the device name
             _snwprintf_s(buf, 256, _TRUNCATE, L"HID Device (Vendor=%04x, Product=%04x)", devinfo.hid.dwVendorId, devinfo.hid.dwProductId);
-            src->name = _wcsdup(buf);
-            if (!src->name) {
-                free(src);
-                free(ridevices);
-                return;
-            }
-        }
 
-        src->type = INPUT_RAWINPUT;
-        src->vendor = devinfo.hid.dwVendorId;
-        src->product = devinfo.hid.dwProductId;
-
-        InputSource** newsrc = realloc(list->src, (list->count + 1) * sizeof(void*));
-        if (!newsrc) {
-            free(src->name);
-            free(src);
-            free(ridevices);
-            return;
-        }
-        list->src = newsrc;
-        list->src[list->count] = src;
-        list->count++;
+        addInputSource(list, INPUT_RAWINPUT, buf, devinfo.hid.dwVendorId, devinfo.hid.dwProductId);
     }
     free(ridevices);
 }

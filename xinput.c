@@ -25,7 +25,7 @@ static bool xinputAvail = false;
 
 bool xinputInit(void)
 {
-    HMODULE lib = LoadLibrary(_T("xinput1_4.dll"));
+    HMODULE lib = LoadLibraryW(L"xinput1_4.dll");
     if (!lib)
         return false;
 
@@ -88,35 +88,35 @@ void xinputPoll(void)
     if (newState && !lastState) {
         analysisInput();        // send button press to be logged
 
-        const char* bname = "Other Button";
+        const wchar_t* bname = L"Other Button";
         if (state.Gamepad.wButtons & XINPUT_GAMEPAD_A)
-            bname = "A Button";
+            bname = L"A Button";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_B)
-            bname = "B Button";
+            bname = L"B Button";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_X)
-            bname = "X Button";
+            bname = L"X Button";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_Y)
-            bname = "Y Button";
+            bname = L"Y Button";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER)
-            bname = "Right Shoulder";
+            bname = L"Right Shoulder";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER)
-            bname = "Left Shoulder";
+            bname = L"Left Shoulder";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB)
-            bname = "Right Thumb";
+            bname = L"Right Thumb";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB)
-            bname = "Left Thumb";
+            bname = L"Left Thumb";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_BACK)
-            bname = "Back Button";
+            bname = L"Back Button";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_START)
-            bname = "Start Button";
+            bname = L"Start Button";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT)
-            bname = "D-Pad Right";
+            bname = L"D-Pad Right";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT)
-            bname = "D-Pad Left";
+            bname = L"D-Pad Left";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN)
-            bname = "D-Pad Down";
+            bname = L"D-Pad Down";
         else if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP)
-            bname = "D-Pad Up";
+            bname = L"D-Pad Up";
         uiSetLastInput(bname, tsGet());
     }
     lastState = newState;
@@ -136,27 +136,6 @@ void xinputEnum(InputSourceList* list)
             continue;
 
         _snwprintf_s(buf, 22, _TRUNCATE, L"XInput Controller #%d", i + 1);
-        InputSource* src = malloc(sizeof(InputSource));
-        if (!src)
-            return;
-        src->name = _wcsdup(buf);
-        if (!src->name) {
-            free(src);
-            return;
-        }
-
-        src->type = INPUT_XINPUT;
-        src->vendor = 0;
-        src->product = i;
-
-        InputSource** newsrc = realloc(list->src, (list->count + 1) * sizeof(void*));
-        if (!newsrc) {
-            free(src->name);
-            free(src);
-            return;
-        }
-        list->src = newsrc;
-        list->src[list->count] = src;
-        list->count++;
+        addInputSource(list, INPUT_XINPUT, buf, 0, i);
     }
 }

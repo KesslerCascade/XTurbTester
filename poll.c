@@ -25,7 +25,7 @@ static unsigned pollThread(void* dummy)
 
 bool pollInit(void)
 {
-	HMODULE hMod = GetModuleHandle(_T("ntdll.dll"));
+	HMODULE hMod = GetModuleHandleW(L"ntdll.dll");
 	if (hMod) {
 		pNtDelayExecution = (NtDelayExecution_t)GetProcAddress(hMod, "NtDelayExecution");
 		pNtSetTimerResolution = (NtSetTimerResolution_t)GetProcAddress(hMod, "NtSetTimerResolution");

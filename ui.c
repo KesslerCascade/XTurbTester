@@ -3,6 +3,7 @@
 #include "rawinput.h"
 #include "resource.h"
 #include "timestamp.h"
+#include "analysis.h"
 
 #include <Windows.h>
 #include <stdio.h>
@@ -12,7 +13,7 @@
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-#define XTWNDCLASS _T("XTurbTesterClass")
+#define XTWNDCLASS L"XTurbTesterClass"
 
 static HWND hMainWin;
 static HWND hControllerLabel;
@@ -50,6 +51,7 @@ static HWND hAvgDelayEdit;
 static HWND hMaxDelayEdit;
 
 static InputSourceList* inputs;
+static bool kbinput;
 
 enum ControlIDs {
 	idControllerSelect = 1001,
@@ -88,12 +90,29 @@ typedef struct DelayUpdateData
 
 typedef struct LastInputData
 {
-	char* name;
+	wchar_t* name;
 	int64 timestamp;
 } LastInputData;
 
 static bool lastinputShown;
 static LastInputData* lastinput;
+
+// only update text if it's different to avoid flicker
+static void UpdateText(HWND hWnd, const wchar_t* text)
+{
+	size_t len = wcslen(text);
+	wchar_t* buf = malloc((len + 6) * sizeof(wchar_t));
+	if (!buf)
+		return;
+
+	SendMessageW(hWnd, WM_GETTEXT, (WPARAM)(len + 4), (LPARAM)buf);
+
+	if (wcscmp(text, buf) != 0) {
+		SendMessageW(hWnd, WM_SETTEXT, 0, (LPARAM)text);
+	}
+
+	free(buf);
+}
 
 static void selectController(HWND hWnd, int cursel)
 {
@@ -108,6 +127,8 @@ static void selectController(HWND hWnd, int cursel)
 			rawinputSelect(hWnd, src->vendor, src->product);
 		else
 			rawinputSelect(hWnd, 0, 0);
+
+		kbinput = (src->type == INPUT_KB);
 
 		uiSetLastInput(NULL, 0);
 	}
@@ -145,10 +166,10 @@ static void uiUpdateLastInput()
 {
 	int64 now = tsGet();
 	if (lastinput && lastinput->name && now - lastinput->timestamp < 10000000) {
-		char buf[256];
-		_snprintf_s(buf, sizeof(buf), _TRUNCATE, "Last input: %s (%d msec ago)",
+		wchar_t buf[256];
+		_snwprintf_s(buf, 256, _TRUNCATE, L"Last input: %s (%d msec ago)",
 			lastinput->name, (int)((now - lastinput->timestamp) / 1000));
-		SendMessageA(hControllerLastInput, WM_SETTEXT, 0, (LPARAM)buf);
+		UpdateText(hControllerLastInput, buf);
 
 		if (!lastinputShown) {
 			ShowWindow(hControllerLastInput, SW_SHOW);
@@ -165,46 +186,46 @@ static void uiUpdateLastInput()
 
 static void uiHandleFreqUpdate(FreqUpdateData* fd)
 {
-	char buf[20];
+	wchar_t buf[20];
 
-	snprintf(buf, sizeof(buf), "%0.4f", fd->inst);
-	SendMessageA(hInstEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "Avg (%d sec)", fd->avgsec);
-	SendMessageA(hAvgLabel, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%0.4f", fd->avg);
-	SendMessageA(hAvgEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.4f", fd->inst);
+	UpdateText(hInstEdit, buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"Avg (%d sec)", fd->avgsec);
+	UpdateText(hAvgLabel, buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.4f", fd->avg);
+	UpdateText(hAvgEdit, buf);
 
 	free(fd);
 }
 
 static void uiHandleMeasuredUpdate(MeasuredUpdateData* fd)
 {
-	char buf[20];
+	wchar_t buf[20];
 
-	snprintf(buf, sizeof(buf), "%0.2f", fd->s1);
-	SendMessageA(h1sEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%0.2f", fd->s2);
-	SendMessageA(h2sEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%0.2f", fd->s3);
-	SendMessageA(h3sEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%0.2f", fd->s5);
-	SendMessageA(h5sEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%0.2f", fd->s10);
-	SendMessageA(h10sEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s1);
+	UpdateText(h1sEdit, buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s2);
+	UpdateText(h2sEdit, buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s3);
+	UpdateText(h3sEdit, buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s5);
+	UpdateText(h5sEdit, buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%0.2f", fd->s10);
+	UpdateText(h10sEdit, buf);
 
 	free(fd);
 }
 
 static void uiHandleDelayUpdate(DelayUpdateData* fd)
 {
-	char buf[20];
+	wchar_t buf[20];
 
-	snprintf(buf, sizeof(buf), "%4d", fd->mind);
-	SendMessageA(hMinDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%4d", fd->avgd);
-	SendMessageA(hAvgDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
-	snprintf(buf, sizeof(buf), "%4d", fd->maxd);
-	SendMessageA(hMaxDelayEdit, WM_SETTEXT, 0, (LPARAM)buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%4d", fd->mind);
+	UpdateText(hMinDelayEdit, buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%4d", fd->avgd);
+	UpdateText(hAvgDelayEdit, buf);
+	_snwprintf_s(buf, 20, _TRUNCATE, L"%4d", fd->maxd);
+	UpdateText(hMaxDelayEdit, buf);
 
 	free(fd);
 
@@ -269,178 +290,178 @@ bool uiInit(HINSTANCE hinst)
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
 	wc.lpszClassName = XTWNDCLASS;
-	if (!RegisterClassEx(&wc))
+	if (!RegisterClassExW(&wc))
 		return false;
 
-	hMainWin = CreateWindowEx(WS_EX_CLIENTEDGE, XTWNDCLASS, PROGNAME_TCH,
+	hMainWin = CreateWindowExW(WS_EX_CLIENTEDGE, XTWNDCLASS, PROGNAMEW,
 		WS_CAPTION | WS_SYSMENU, 0, 0, 480, 400, NULL, NULL, hinst, NULL);
 
 	int y = 20;
-	hControllerLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("Select controller:"), WS_CHILD | WS_VISIBLE, 20, y, 160, 20,
+	hControllerLabel = CreateWindowExW(0, L"STATIC",
+		L"Select controller:", WS_CHILD | WS_VISIBLE, 20, y, 160, 20,
 		hMainWin, NULL, hinst, NULL);
 	WPARAM hFont = (WPARAM)GetStockObject(DEFAULT_GUI_FONT);
 	SendMessage(hControllerLabel, WM_SETFONT, hFont, 0);
 	y += 20;
 
-	hControllerSelect = CreateWindowEx(0, _T("COMBOBOX"),
-		_T(""), WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 20, y, 300, 22,
+	hControllerSelect = CreateWindowExW(0, L"COMBOBOX",
+		L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 20, y, 300, 22,
 		hMainWin, (HMENU)idControllerSelect, hinst, NULL);
 	SendMessage(hControllerSelect, WM_SETFONT, hFont, 0);
 
-	hControllerRefresh = CreateWindowEx(0, _T("BUTTON"),
-		_T("Refresh"), WS_CHILD | WS_VISIBLE, 340, y, 60, 22,
+	hControllerRefresh = CreateWindowExW(0, L"BUTTON",
+		L"Refresh", WS_CHILD | WS_VISIBLE, 340, y, 60, 22,
 		hMainWin, (HMENU)idControllerRefresh, hinst, NULL);
 	SendMessage(hControllerRefresh, WM_SETFONT, hFont, 0);
 	y += 25;
 
-	hControllerLastInput = CreateWindowEx(0, _T("STATIC"),
-		_T(""), WS_CHILD | WS_VISIBLE, 40, y, 300, 20,
+	hControllerLastInput = CreateWindowExW(0, L"STATIC",
+		L"", WS_CHILD | WS_VISIBLE, 40, y, 300, 20,
 		hMainWin, NULL, hinst, NULL);
 	SendMessage(hControllerLastInput, WM_SETFONT, hFont, 0);
 
 	refreshControllers();
     y += 40;
 
-	hRateSep = CreateWindowEx(0, _T("STATIC"),
+	hRateSep = CreateWindowExW(0, L"STATIC",
 		NULL, WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
 		130, y + 8, 310, 4,
 		hMainWin, 0, hinst, NULL);
-	hRateSepLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("Calculated Rate (Hz)"), WS_CHILD | WS_VISIBLE,
+	hRateSepLabel = CreateWindowExW(0, L"STATIC",
+		L"Calculated Rate (Hz)", WS_CHILD | WS_VISIBLE,
 		20, y, 110, 32,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hRateSepLabel, WM_SETFONT, hFont, 0);
 	y += 20;
 
-	hInstLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("Instant"), WS_CHILD | WS_VISIBLE,
+	hInstLabel = CreateWindowExW(0, L"STATIC",
+		L"Instant", WS_CHILD | WS_VISIBLE,
 		40, y, 60, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hInstLabel, WM_SETFONT, hFont, 0);
-	hAvgLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("Avg (0 sec)"), WS_CHILD | WS_VISIBLE,
+	hAvgLabel = CreateWindowExW(0, L"STATIC",
+		L"Avg (0 sec)", WS_CHILD | WS_VISIBLE,
 		120, y, 80, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hAvgLabel, WM_SETFONT, hFont, 0);
 	y += 20;
-	hInstEdit = CreateWindowEx(0, _T("EDIT"),
-		_T("0"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+	hInstEdit = CreateWindowExW(0, L"EDIT",
+		L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
 		40, y, 60, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hInstEdit, WM_SETFONT, hFont, 0);
-	hAvgEdit = CreateWindowEx(0, _T("EDIT"),
-		_T("0"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+	hAvgEdit = CreateWindowExW(0, L"EDIT",
+		L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
 		120, y, 60, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hAvgEdit, WM_SETFONT, hFont, 0);
 	y += 40;
 
-	hMeasuredSep = CreateWindowEx(0, _T("STATIC"),
+	hMeasuredSep = CreateWindowExW(0, L"STATIC",
 		NULL, WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
 		130, y + 8, 310, 4,
 		hMainWin, 0, hinst, NULL);
-	hMeasuredSepLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("Measured Rate (Hz)"), WS_CHILD | WS_VISIBLE,
+	hMeasuredSepLabel = CreateWindowExW(0, L"STATIC",
+		L"Measured Rate (Hz)", WS_CHILD | WS_VISIBLE,
 		20, y, 110, 32,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hMeasuredSepLabel, WM_SETFONT, hFont, 0);
 	y += 20;
 
-	h1sLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("1 sec"), WS_CHILD | WS_VISIBLE,
+	h1sLabel = CreateWindowExW(0, L"STATIC",
+		L"1 sec", WS_CHILD | WS_VISIBLE,
 		40, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(h1sLabel, WM_SETFONT, hFont, 0);
-	h2sLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("2 sec"), WS_CHILD | WS_VISIBLE,
+	h2sLabel = CreateWindowExW(0, L"STATIC",
+		L"2 sec", WS_CHILD | WS_VISIBLE,
 		120, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(h2sLabel, WM_SETFONT, hFont, 0);
-	h3sLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("3 sec"), WS_CHILD | WS_VISIBLE,
+	h3sLabel = CreateWindowExW(0, L"STATIC",
+		L"3 sec", WS_CHILD | WS_VISIBLE,
 		200, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(h3sLabel, WM_SETFONT, hFont, 0);
-	h5sLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("5 sec"), WS_CHILD | WS_VISIBLE,
+	h5sLabel = CreateWindowExW(0, L"STATIC",
+		L"5 sec", WS_CHILD | WS_VISIBLE,
 		280, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(h5sLabel, WM_SETFONT, hFont, 0);
-	h10sLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("10 sec"), WS_CHILD | WS_VISIBLE,
+	h10sLabel = CreateWindowExW(0, L"STATIC",
+		L"10 sec", WS_CHILD | WS_VISIBLE,
 		360, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(h10sLabel, WM_SETFONT, hFont, 0);
 	y += 20;
 
-	h1sEdit = CreateWindowEx(0, _T("EDIT"),
-		_T("0"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+	h1sEdit = CreateWindowExW(0, L"EDIT",
+		L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
 		40, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(h1sEdit, WM_SETFONT, hFont, 0);
-	h2sEdit = CreateWindowEx(0, _T("EDIT"),
-		_T("0"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+	h2sEdit = CreateWindowExW(0, L"EDIT",
+		L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
 		120, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(h2sEdit, WM_SETFONT, hFont, 0);
-	h3sEdit = CreateWindowEx(0, _T("EDIT"),
-		_T("0"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+	h3sEdit = CreateWindowExW(0, L"EDIT",
+		L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
 		200, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(h3sEdit, WM_SETFONT, hFont, 0);
-	h5sEdit = CreateWindowEx(0, _T("EDIT"),
-		_T("0"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+	h5sEdit = CreateWindowExW(0, L"EDIT",
+		L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
 		280, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(h5sEdit, WM_SETFONT, hFont, 0);
-	h10sEdit = CreateWindowEx(0, _T("EDIT"),
-		_T("0"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+	h10sEdit = CreateWindowExW(0, L"EDIT",
+		L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
 		360, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(h10sEdit, WM_SETFONT, hFont, 0);
 	y += 40;
 
-	hDelaySep = CreateWindowEx(0, _T("STATIC"),
+	hDelaySep = CreateWindowExW(0, L"STATIC",
 		NULL, WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
 		180, y + 8, 260, 4,
 		hMainWin, 0, hinst, NULL);
-	hDelaySepLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("Input Spacing (last 2 seconds)"), WS_CHILD | WS_VISIBLE,
+	hDelaySepLabel = CreateWindowExW(0, L"STATIC",
+		L"Input Spacing (last 2 seconds)", WS_CHILD | WS_VISIBLE,
 		20, y, 160, 32,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hDelaySepLabel, WM_SETFONT, hFont, 0);
 	y += 20;
 
-	hMinDelayLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("Min (ms)"), WS_CHILD | WS_VISIBLE,
+	hMinDelayLabel = CreateWindowExW(0, L"STATIC",
+		L"Min (ms)", WS_CHILD | WS_VISIBLE,
 		40, y, 80, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hMinDelayLabel, WM_SETFONT, hFont, 0);
-	hAvgDelayLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("Avg (ms)"), WS_CHILD | WS_VISIBLE,
+	hAvgDelayLabel = CreateWindowExW(0, L"STATIC",
+		L"Avg (ms)", WS_CHILD | WS_VISIBLE,
 		120, y, 80, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hAvgDelayLabel, WM_SETFONT, hFont, 0);
-	hMaxDelayLabel = CreateWindowEx(0, _T("STATIC"),
-		_T("Max (ms)"), WS_CHILD | WS_VISIBLE,
+	hMaxDelayLabel = CreateWindowExW(0, L"STATIC",
+		L"Max (ms)", WS_CHILD | WS_VISIBLE,
 		200, y, 80, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hMaxDelayLabel, WM_SETFONT, hFont, 0);
 	y += 20;
 
-	hMinDelayEdit = CreateWindowEx(0, _T("EDIT"),
-		_T("0"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+	hMinDelayEdit = CreateWindowExW(0, L"EDIT",
+		L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
 		40, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hMinDelayEdit, WM_SETFONT, hFont, 0);
-	hAvgDelayEdit = CreateWindowEx(0, _T("EDIT"),
-		_T("0"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+	hAvgDelayEdit = CreateWindowExW(0, L"EDIT",
+		L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
 		120, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hAvgDelayEdit, WM_SETFONT, hFont, 0);
-	hMaxDelayEdit = CreateWindowEx(0, _T("EDIT"),
-		_T("0"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+	hMaxDelayEdit = CreateWindowExW(0, L"EDIT",
+		L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
 		200, y, 40, 20,
 		hMainWin, 0, hinst, NULL);
 	SendMessage(hMaxDelayEdit, WM_SETFONT, hFont, 0);
@@ -459,6 +480,13 @@ void uiRun(int nCmdShow)
 	while ((ret = GetMessage(&msg, NULL, 0, 0)) != 0) {
 		if (ret == -1)
 			break;
+
+		if (kbinput && msg.message == WM_KEYDOWN) {
+			wchar_t buf[32];
+			if (GetKeyNameTextW((LONG)msg.lParam, buf, 32))
+				uiSetLastInput(buf, tsGet());
+			analysisInput();
+		}
 
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
@@ -508,13 +536,13 @@ void uiUpdateDelay(int mind, int avgd, int maxd)
 	PostMessage(hMainWin, MSG_DELAYUPDATE, 0, (LPARAM)d);
 }
 
-void uiSetLastInput(const char* name, int64 timestamp)
+void uiSetLastInput(const wchar_t* name, int64 timestamp)
 {
 	LastInputData* d = malloc(sizeof(LastInputData));
 	if (!d)
 		return;
 
-	d->name = name ? _strdup(name) : NULL;
+	d->name = name ? _wcsdup(name) : NULL;
 	d->timestamp = timestamp;
 	PostMessage(hMainWin, MSG_SETLASTINPUT, 0, (LPARAM)d);
 }
