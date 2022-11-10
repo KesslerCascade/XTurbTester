@@ -31,34 +31,6 @@ bool addInputSource(InputSourceList* list, InputType type, const wchar_t* name, 
 	return true;
 }
 
-static void addNoneSource(InputSourceList* list)
-{
-	// dummy entry at the end of the list
-	
-	InputSource* src = malloc(sizeof(InputSource));
-	if (!src)
-		return;
-
-	src->type = INPUT_NONE;
-	src->product = 0;
-	src->vendor = 0;
-	src->name = _wcsdup(L"None");
-	if (!src->name) {
-		free(src);
-		return;
-	}
-
-	InputSource** newsrc = realloc(list->src, (list->count + 1) * sizeof(void*));
-	if (!newsrc) {
-		free(src->name);
-		free(src);
-		return;
-	}
-	list->src = newsrc;
-	list->src[list->count] = src;
-	list->count++;
-}
-
 InputSourceList* getInputSources(void)
 {
 	InputSourceList* list = calloc(1, sizeof(InputSourceList));
