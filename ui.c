@@ -286,7 +286,7 @@ bool uiInit(HINSTANCE hinst)
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
 	wc.lpszClassName = XTWNDCLASS;
-	if (!RegisterClassEx(&wc))
+	if (!RegisterClassExW(&wc))
 		return false;
 
 	hMainWin = CreateWindowExW(WS_EX_CLIENTEDGE, XTWNDCLASS, PROGNAMEW,
