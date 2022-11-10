@@ -3,6 +3,7 @@
 #include "rawinput.h"
 #include "resource.h"
 #include "timestamp.h"
+#include "analysis.h"
 
 #include <Windows.h>
 #include <stdio.h>
@@ -50,6 +51,7 @@ static HWND hAvgDelayEdit;
 static HWND hMaxDelayEdit;
 
 static InputSourceList* inputs;
+static bool kbinput;
 
 enum ControlIDs {
 	idControllerSelect = 1001,
@@ -125,6 +127,8 @@ static void selectController(HWND hWnd, int cursel)
 			rawinputSelect(hWnd, src->vendor, src->product);
 		else
 			rawinputSelect(hWnd, 0, 0);
+
+		kbinput = (src->type == INPUT_KB);
 
 		uiSetLastInput(NULL, 0);
 	}
@@ -476,6 +480,13 @@ void uiRun(int nCmdShow)
 	while ((ret = GetMessage(&msg, NULL, 0, 0)) != 0) {
 		if (ret == -1)
 			break;
+
+		if (kbinput && msg.message == WM_KEYDOWN) {
+			wchar_t buf[32];
+			if (GetKeyNameTextW((LONG)msg.lParam, buf, 32))
+				uiSetLastInput(buf, tsGet());
+			analysisInput();
+		}
 
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);

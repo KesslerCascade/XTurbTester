@@ -136,27 +136,6 @@ void xinputEnum(InputSourceList* list)
             continue;
 
         _snwprintf_s(buf, 22, _TRUNCATE, L"XInput Controller #%d", i + 1);
-        InputSource* src = malloc(sizeof(InputSource));
-        if (!src)
-            return;
-        src->name = _wcsdup(buf);
-        if (!src->name) {
-            free(src);
-            return;
-        }
-
-        src->type = INPUT_XINPUT;
-        src->vendor = 0;
-        src->product = i;
-
-        InputSource** newsrc = realloc(list->src, (list->count + 1) * sizeof(void*));
-        if (!newsrc) {
-            free(src->name);
-            free(src);
-            return;
-        }
-        list->src = newsrc;
-        list->src[list->count] = src;
-        list->count++;
+        addInputSource(list, INPUT_XINPUT, buf, 0, i);
     }
 }
